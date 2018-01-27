@@ -34,20 +34,12 @@
 
 // File read for JSON and PostgreSQL
 var fs                  = require('fs');
-
-// Scheduler
 var schedule            = require('node-schedule');
-
-// DiscordBots API
 const snekfetch         = require('snekfetch');
-
-// HTTP request
 var request             = require("request");
+var crypto              = require('crypto');
 
-// Get the api keys
 var keys                = JSON.parse(fs.readFileSync('keys.api','utf8'));
-
-// Include API things
 const Discord 		= require('discord.js');
 
 //Toku Mei server text channel
@@ -73,6 +65,9 @@ var messageCount        = 0;
 var referenceTime       = Date.now();
 
 
+// User Data
+var users               = {};
+
 
 // -------------------------------------------
 // -------------------------------------------
@@ -94,14 +89,14 @@ client.on('ready', () => {
     console.log('dev mode');
   }
 
-
+  /*
   client.fetchUser("217327366102319106")
     .then(u => {
       u.send("Relay loaded.")
         .catch(console.log)
     })
     .catch(console.log);
-
+    */
 });
 
 
@@ -119,7 +114,7 @@ client.on('message', message => {
 
 
   /*
-  // Update every 100 messages
+    // Update every 100 messages
   if(Math.floor(Math.random() * 100) === 42){
     snekfetch.post(`https://discordbots.org/api/bots/${client.user.id}/stats`)
       .set('Authorization', keys['dbots'])
@@ -130,12 +125,21 @@ client.on('message', message => {
   */
 
 
-  // Check for perms (temporary)
-  message.guild.fetchMember(message.author)
-    .then(function(gm) {
-      commands(message, gm.roles.some(r => { return r.name === 'TsukiBoter' }), config);
-    })
-    .catch(0);
+  let msg       = message.content;
+  let author    = crypto.createHash('sha256').update(message.author.id).digest('hex');
+
+  if(message.channel.type === 'dm'){
+    msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
+
+    console.log(author)
+    if(msg.length > 0){
+      msg = ('`' + 
+        author.slice(-6) +
+        ' '.repeat(2) + 
+        ':` ') + msg;
+      client.channels.get(channelID).send(msg)
+    }
+  }
 
 })
 
@@ -152,8 +156,6 @@ function commands(message, botAdmin, config){
 
   // Get the channel where the bot will answer.
   let channel = message.channel;
-
-  // Split the message by spaces.
 
   // Get DiscordID via DM
   if(command === 'id'){
