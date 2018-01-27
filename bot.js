@@ -34,8 +34,6 @@
 
 // File read for JSON and PostgreSQL
 var fs                  = require('fs');
-var pg                  = require('pg');
-var pgp                 = require('pg-promise');
 
 // Scheduler
 var schedule            = require('node-schedule');
@@ -52,7 +50,6 @@ var keys                = JSON.parse(fs.readFileSync('keys.api','utf8'));
 
 // Include API things
 const Discord 		= require('discord.js');
-const Client 		= require('coinbase').Client;
 
 var didyoumean = require("didyoumean");
 
@@ -99,7 +96,6 @@ client.on('ready', () => {
     console.log('dev mode');
   }
 
-  client.user.setGame('.tbhelp');
 
   client.fetchUser("217327366102319106")
     .then(u => {
@@ -124,7 +120,7 @@ client.on('message', message => {
   if(messageCount === 0) referenceTime = Date.now();
 
 
-
+  /*
   // Update every 100 messages
   if(Math.floor(Math.random() * 100) === 42){
     snekfetch.post(`https://discordbots.org/api/bots/${client.user.id}/stats`)
@@ -133,7 +129,7 @@ client.on('message', message => {
       .then(console.log('updated dbots.org status.'))
       .catch(e => console.warn('dbots.org down'))
   }
-
+  */
 
 
   // Check for perms (temporary)
