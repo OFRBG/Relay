@@ -47,11 +47,11 @@ var request             = require("request");
 // Get the api keys
 var keys                = JSON.parse(fs.readFileSync('keys.api','utf8'));
 
-
 // Include API things
 const Discord 		= require('discord.js');
 
-var didyoumean = require("didyoumean");
+//Toku Mei server text channel
+const channelID         = "406876380819750913";
 
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -71,8 +71,6 @@ var ProductRegister     = new Web3.eth.Contract(abi, "0x27659AB24B40461Bdc9DC381
 var channelName         = 'general';
 var messageCount        = 0;
 var referenceTime       = Date.now();
-
-
 
 
 
