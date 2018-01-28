@@ -141,21 +141,21 @@ client.on('message', message => {
 
   let uid       = message.author.id;
   let msg       = message.content;
-  let author    = crypto.createHash('sha256').update(message.author.id).digest('hex');
+  let author    = crypto.createHash('sha256').update(message.author.id + Math.floor(Date.now() / 1000 / 60 / 60 / 24)).digest('hex');
 
 
   if(message.channel.type === 'dm'){
+    if(!users[uid]){
+      users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
+      message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
+    }
     
     if(users[uid].time + 86400000 < Date.now()){
       users[uid].time = Date.now();
       users[uid].remainingStake = users[uid].stake;
     } 
     
-    if(!users[uid]){
-      users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
-      message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
-    } else if(users[uid].remainingStake > 0){
-
+    if(users[uid].remainingStake > 0){
       msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
 
       if(msg.length > 0){
