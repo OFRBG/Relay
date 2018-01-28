@@ -92,7 +92,7 @@ client.on('ready', () => {
     console.log('dev mode');
   }
 
-  watchRole = client.guilds.get('406876380299788288').roles.get('406998675534118912');
+  watchRole = client.guilds.get('406876380299788288').roles.get('406876519982432256');
   client.channels.get(channelID).bulkDelete(msgLimit*2)
 });
 
@@ -100,8 +100,8 @@ client.on('ready', () => {
 client.on('guildMemberAdd', member => {
   member.createDM()
     .then(chn => {
-        chn.send('Welcome to Relay.');
-      })
+      chn.send('Welcome to Relay.');
+    })
     .catch(console.log);
 
   member.addRole(watchRole);
@@ -145,7 +145,12 @@ client.on('message', message => {
 
 
   if(message.channel.type === 'dm'){
-
+    
+    if(users[uid].time + 86400000 < Date.now()){
+      users[uid].time = Date.now();
+      users[uid].remainingStake = users[uid].stake;
+    } 
+    
     if(!users[uid]){
       users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
       message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
@@ -171,9 +176,6 @@ client.on('message', message => {
           .catch(0);
 
       }
-    } else if(users[uid].time + 86400000 < Date.now()){
-      users[uid].time = Date.now();
-      users[uid].remainingStake = users[uid].stake;
     } else {
       message.channel.send('Out of Okane.');
     }
