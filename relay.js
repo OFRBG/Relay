@@ -65,11 +65,12 @@ var messageCount        = 0;
 var referenceTime       = Date.now();
 
 // User Data
-var users               = {};
+var users;
 
 // Message Queue
-var messageQueue        = [];
+var messageQueue;
 
+// Server general role
 var watchRole;
 
 // -------------------------------------------
@@ -94,6 +95,17 @@ client.on('ready', () => {
 
   watchRole = client.guilds.get('406876380299788288').roles.get('406876519982432256');
   client.channels.get(channelID).bulkDelete(msgLimit*2)
+
+  fs.readFile('messages.json', function(err, data) {
+    if(!err) messageQueue = data;
+    else messageQueue = [];
+  });
+
+  fs.readFile('uid.json', function(err, data) {
+    if(!err) users = JSON.parse(data);
+    else users = {};
+  });
+
 });
 
 
@@ -120,6 +132,10 @@ client.on('message', message => {
 
   // Ignore users created 7 days ago or less
   if(message.author.createdTimestamp + 86400000*7 > Date.now())
+    return;
+
+  // Wait for JSON to load
+  if(users === null || messageQueue === null)
     return;
 
   // Keep a counter of messages
@@ -226,6 +242,12 @@ function commands(message, botAdmin, config){
   }
 }
 
+process.on('SIGINT', function() {
+  console.log(users)
+  fs.writeFile('uid.json', JSON.stringify(users), function(err) {
+    process.exit(2);
+  });
+});
 
 // Jack in, Megaman. Execute.
 client.login(token);
