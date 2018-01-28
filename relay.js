@@ -149,38 +149,43 @@ client.on('message', message => {
       users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
       message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
     }
-    
-    if(users[uid].time + 86400000 < Date.now()){
-      users[uid].time = Date.now();
-      users[uid].remainingStake = users[uid].stake;
-    } 
-    
-    if(users[uid].remainingStake > 0){
-      msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
 
-      if(msg.length > 0){
-        msg = ('`' + 
-          author.slice(-8) +
-          ' '.repeat(1) + 
-          ':` ') + msg;
-
-        client.channels.get(channelID).send(msg)
-          .then(function(m){
-            messageQueue.push(m);
-            users[uid].remainingStake -= 1;
-
-            if(messageQueue.length > msgLimit){
-              messageQueue.shift().delete().catch(console.log);
-            }
-          })
-          .catch(0);
-
-      }
+    if(msg === ".status"){
+      let u = users[uid];
+      message.channel.send('User hash: `' + u.hash + '`.\nYour registered daily stake is `' + u.stake + '`.\nYour remaining stake is `' + u.remainingStake + '`.');
     } else {
-      message.channel.send('Out of Okane.');
+
+      if(users[uid].time + 86400000 < Date.now()){
+        users[uid].time = Date.now();
+        users[uid].remainingStake = users[uid].stake;
+      } 
+
+      if(users[uid].remainingStake > 0){
+        msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
+
+        if(msg.length > 0){
+          msg = ('`' + 
+            author.slice(-8) +
+            ' '.repeat(1) + 
+            ':` ') + msg;
+
+          client.channels.get(channelID).send(msg)
+            .then(function(m){
+              messageQueue.push(m);
+              users[uid].remainingStake -= 1;
+
+              if(messageQueue.length > msgLimit){
+                messageQueue.shift().delete().catch(console.log);
+              }
+            })
+            .catch(0);
+
+        }
+      } else {
+        message.channel.send('Out of Okane.');
+      }
     }
   }
-
 
 })
 
