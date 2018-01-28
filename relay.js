@@ -44,7 +44,7 @@ const Discord 		= require('discord.js');
 
 //Toku Mei server text channel
 const channelID         = "406876380819750913";
-
+const msgLimit          = 20;
 
 // ----------------------------------------------------------------------------------------------------------------
 
@@ -64,10 +64,11 @@ var channelName         = 'general';
 var messageCount        = 0;
 var referenceTime       = Date.now();
 
-
 // User Data
 var users               = {};
 
+// Message Queue
+var messageQueue        = [];
 
 // -------------------------------------------
 // -------------------------------------------
@@ -89,16 +90,17 @@ client.on('ready', () => {
     console.log('dev mode');
   }
 
-  /*
-  client.fetchUser("217327366102319106")
-    .then(u => {
-      u.send("Relay loaded.")
-        .catch(console.log)
-    })
-    .catch(console.log);
-    */
+  client.channels.get(channelID).bulkDelete(msgLimit*2)
 });
 
+
+client.on('guildMemberAdd', member => {
+  member.createDM().then(chn => {
+    chn.send('Welcome to Relay.')
+  }).catch(console.log);
+
+  member.addRole('406998675534118912').catch(console.log);
+}
 
 // Event goes off every time a message is read.
 client.on('message', message => {
@@ -107,6 +109,9 @@ client.on('message', message => {
   if(process.argv[2] === "-d" && message.author.id !== "217327366102319106")
     return;
 
+  // Ignore bot messages
+  if(message.author.id === '406880377077104640')
+    return;
 
   // Keep a counter of messages
   messageCount = (messageCount + 1) % 10000;
@@ -125,21 +130,47 @@ client.on('message', message => {
   */
 
 
+  let uid       = message.author.id;
   let msg       = message.content;
   let author    = crypto.createHash('sha256').update(message.author.id).digest('hex');
 
-  if(message.channel.type === 'dm'){
-    msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
 
-    console.log(author)
-    if(msg.length > 0){
-      msg = ('`' + 
-        author.slice(-6) +
-        ' '.repeat(2) + 
-        ':` ') + msg;
-      client.channels.get(channelID).send(msg)
+  if(message.channel.type === 'dm'){
+    console.log(users[uid])
+
+    if(!users[uid]){
+      users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
+      message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
+    } else if(users[uid].remainingStake > 0){
+
+      msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
+
+      if(msg.length > 0){
+        msg = ('`' + 
+          author.slice(-8) +
+          ' '.repeat(1) + 
+          ':` ') + msg;
+
+        client.channels.get(channelID).send(msg)
+          .then(function(m){
+            messageQueue.push(m);
+            users[uid].remainingStake -= 1;
+
+            if(messageQueue.length > msgLimit){
+              messageQueue.shift().delete().catch(console.log);
+            }
+          })
+          .catch(0);
+
+      }
+    } else if(users[uid].time + 86400000 < Date.now()){
+      users[uid].time = Date.now();
+      users[uid].remainingStake = users[uid].stake;
+    } else {
+      message.channel.send('Out of Okane.');
     }
   }
+
 
 })
 
@@ -179,8 +210,6 @@ function commands(message, botAdmin, config){
 
   }
 }
-
-
 
 
 // Jack in, Megaman. Execute.
