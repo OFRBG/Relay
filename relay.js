@@ -70,6 +70,8 @@ var users               = {};
 // Message Queue
 var messageQueue        = [];
 
+var watchRole;
+
 // -------------------------------------------
 // -------------------------------------------
 //
@@ -90,17 +92,20 @@ client.on('ready', () => {
     console.log('dev mode');
   }
 
+  watchRole = client.guilds.get('406876380299788288').roles.get('406998675534118912');
   client.channels.get(channelID).bulkDelete(msgLimit*2)
 });
 
 
 client.on('guildMemberAdd', member => {
-  member.createDM().then(chn => {
-    chn.send('Welcome to Relay.')
-  }).catch(console.log);
+  member.createDM()
+    .then(chn => {
+        chn.send('Welcome to Relay.');
+      })
+    .catch(console.log);
 
-  member.addRole('406998675534118912').catch(console.log);
-}
+  member.addRole(watchRole);
+});
 
 // Event goes off every time a message is read.
 client.on('message', message => {
@@ -111,6 +116,10 @@ client.on('message', message => {
 
   // Ignore bot messages
   if(message.author.id === '406880377077104640')
+    return;
+
+  // Ignore users created 7 days ago or less
+  if(message.author.createdTimestamp + 86400000*7 > Date.now())
     return;
 
   // Keep a counter of messages
@@ -136,7 +145,6 @@ client.on('message', message => {
 
 
   if(message.channel.type === 'dm'){
-    console.log(users[uid])
 
     if(!users[uid]){
       users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
