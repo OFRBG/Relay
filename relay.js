@@ -44,7 +44,7 @@ const Discord 		= require('discord.js');
 
 //Toku Mei server text channel
 const channelID         = "406876380819750913";
-const msgLimit          = 20;
+const msgLimit          = 50;
 
 // ----------------------------------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ const Web3              = new web3(new web3.providers.HttpProvider('https://kova
 
 const abi               = [{"constant":true,"inputs":[],"name":"getRating","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"negative","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_vote","type":"bool"}],"name":"feedback","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"productName","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_newPrice","type":"uint256"}],"name":"setPrice","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_id","type":"string"}],"name":"checkPayment","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"price","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_id","type":"string"}],"name":"payment","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"positive","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"_price","type":"uint256"},{"name":"_productName","type":"string"},{"name":"_owner","type":"address"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"}];
 
-var ProductRegister     = new Web3.eth.Contract(abi, "0x27659AB24B40461Bdc9DC3817683CC0508f74c42");
+var ProductRegister     = new Web3.eth.Contract(abi, "");
 
 // ----------------------------------------------------------------------------------------------------------------
 
@@ -68,10 +68,13 @@ var referenceTime       = Date.now();
 var users;
 
 // Message Queue
-var messageQueue;
+var messageQueue        = [];
 
 // Server general role
 var watchRole;
+
+// Active users
+var activeUsers         = {};
 
 // -------------------------------------------
 // -------------------------------------------
@@ -94,12 +97,8 @@ client.on('ready', () => {
   }
 
   watchRole = client.guilds.get('406876380299788288').roles.get('406876519982432256');
-  client.channels.get(channelID).bulkDelete(msgLimit*2)
-
-  fs.readFile('messages.json', function(err, data) {
-    if(!err) messageQueue = data;
-    else messageQueue = [];
-  });
+  
+  // client.channels.get(channelID).bulkDelete(msgLimit*2)
 
   fs.readFile('uid.json', function(err, data) {
     if(!err) users = JSON.parse(data);
@@ -143,32 +142,31 @@ client.on('message', message => {
   if(messageCount === 0) referenceTime = Date.now();
 
 
-  /*
-    // Update every 100 messages
-  if(Math.floor(Math.random() * 100) === 42){
-    snekfetch.post(`https://discordbots.org/api/bots/${client.user.id}/stats`)
-      .set('Authorization', keys['dbots'])
-      .send({ server_count: client.guilds.size })
-      .then(console.log('updated dbots.org status.'))
-      .catch(e => console.warn('dbots.org down'))
-  }
-  */
-
-
   let uid       = message.author.id;
   let msg       = message.content;
-  let author    = crypto.createHash('sha256').update(message.author.id + Math.floor(Date.now() / 1000 / 60 / 60 / 24)).digest('hex');
+  let author    = crypto.createHash('sha256').update(message.author.id + Math.floor(Date.now() / 1000 / 60 / 60 / 24)).digest('hex').slice(-8);
 
 
   if(message.channel.type === 'dm'){
     if(!users[uid]){
-      users[uid] = { hash: author, stake: 100, remainingStake: 100, time: Date.now() };
+      users[uid] = { hash: 0, stake: 100, remainingStake: 100, time: Date.now() };
       message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
     }
 
-    if(msg === ".status"){
+    const fmsg = msg.split(' ')[0];
+
+    if(fmsg === ".stake"){
       let u = users[uid];
-      message.channel.send('User hash: `' + u.hash + '`.\nYour registered daily stake is `' + u.stake + '`.\nYour remaining stake is `' + u.remainingStake + '`.');
+      message.channel.send('Your registered daily stake is `' + u.stake + '`.\nYour remaining stake is `' + u.remainingStake + '`.');
+    
+    } else if(fmsg === ".logout"){
+      delete activeUsers[uid];
+    
+    } else if(/#[abcdef0-9]{8}/.test(fmsg)){
+      const h = fmsg.substr(1);
+      if(h === users[users[h]].hash)
+        client.users.get(users[h]).send("`" + users[uid].hash + " via DM: ` " + msg);
+    
     } else {
 
       if(users[uid].time + 86400000 < Date.now()){
@@ -176,12 +174,17 @@ client.on('message', message => {
         users[uid].remainingStake = users[uid].stake;
       } 
 
+      users[author] = uid;
+      users[uid].hash = author;
+
       if(users[uid].remainingStake > 0){
         msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
 
+        activeUsers[uid] = Date.now();
+
         if(msg.length > 0){
           msg = ('`' + 
-            author.slice(-8) +
+            author +
             ' '.repeat(1) + 
             ':` ') + msg;
 
@@ -195,6 +198,13 @@ client.on('message', message => {
               }
             })
             .catch(0);
+
+          for(let u in activeUsers){
+            if(activeUsers[u] + 60000 < Date.now())
+              delete activeUsers[u];
+            
+            if(uid !== u) client.users.get(u).send(msg);
+          }
 
         }
       } else {
