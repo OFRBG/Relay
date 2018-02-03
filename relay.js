@@ -94,11 +94,10 @@ client.on('ready', () => {
 
   if(process.argv[2] === "-d"){
     console.log('dev mode');
+    client.channels.get(channelID).bulkDelete(msgLimit*30);
   }
 
   watchRole = client.guilds.get('406876380299788288').roles.get('406876519982432256');
-  
-  // client.channels.get(channelID).bulkDelete(msgLimit*2)
 
   fs.readFile('uid.json', function(err, data) {
     if(!err) users = JSON.parse(data);
@@ -144,16 +143,20 @@ client.on('message', message => {
 
   let uid       = message.author.id;
   let msg       = message.content;
-  let author    = crypto.createHash('sha256').update(message.author.id + Math.floor(Date.now() / 1000 / 60 / 60 / 24)).digest('hex').slice(-8);
+  let author    = crypto.createHash('sha256').update(message.author.id + Math.floor(Date.now() / 1000 / 60 / 60)).digest('hex').slice(-8);
 
-
+  
   if(message.channel.type === 'dm'){
     if(!users[uid]){
-      users[uid] = { hash: 0, stake: 100, remainingStake: 100, time: Date.now() };
+      users[uid] = { hash: 0, stake: 100, remainingStake: 100, time: Date.now(), dm: '' };
       message.channel.send('Welcome to Relay. You have 100 Okane stakes remaining. Each relayed message uses one Okane and the stake is refreshed every 24 hours.');
     }
+    
+    users[author] = uid;
+    users[uid].hash = author;
 
-    const fmsg = msg.split(' ')[0];
+    const split = msg.split(' ');
+    const fmsg = split[0];
 
     if(fmsg === ".stake"){
       let u = users[uid];
@@ -162,9 +165,18 @@ client.on('message', message => {
     } else if(fmsg === ".logout"){
       delete activeUsers[uid];
     
-    } else if(/#[abcdef0-9]{8}/.test(fmsg)){
-      const h = fmsg.substr(1);
-      if(h === users[users[h]].hash)
+    } else if(fmsg === ".start"){
+      if(split.length > 1 && /#[abcdef0-9]{8}/.test(split[1])){
+        users[uid].dm = split[1].substr(1);
+        client.users.get(uid).send("`Started DM channel with " + users[uid].dm + ".` `Use .end to close.`")
+      }
+    } else if(fmsg === ".end"){
+      users[uid].dm = '';
+      client.users.get(uid).send("`Closed DM channel.`")
+    
+    } else if(/#[abcdef0-9]{8}/.test(fmsg) || users[uid].dm !== ''){
+      const h = users[uid].dm === '' ? fmsg.substr(1) : users[uid].dm;
+      if(users[h] && h === users[users[h]].hash)
         client.users.get(users[h]).send("`" + users[uid].hash + " via DM: ` " + msg);
     
     } else {
@@ -174,8 +186,6 @@ client.on('message', message => {
         users[uid].remainingStake = users[uid].stake;
       } 
 
-      users[author] = uid;
-      users[uid].hash = author;
 
       if(users[uid].remainingStake > 0){
         msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
