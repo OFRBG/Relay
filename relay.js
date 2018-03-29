@@ -188,7 +188,15 @@ client.on('message', message => {
 
 
       if(users[uid].remainingStake > 0){
-        msg = msg.replace(/[^\w\s\.\,\?\!<>]/g,'');
+
+        // Parse Relay format to Discord emoji
+        msg = msg.replace(/\$[a-z]*\$/, function(match, offset, string){
+          const em = match.slice(1).slice(0,-1);
+          return '<:' + em + ":" + client.emojis.find('name', em).id + '>';
+        });
+
+        // Remove possibly unsafe chars
+        msg = msg.replace(/[^\w\$\s\.\,\?\!<>:]/g,'');
 
         activeUsers[uid] = Date.now();
 
