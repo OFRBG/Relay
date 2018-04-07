@@ -170,6 +170,7 @@ client.on('message', message => {
         users[uid].dm = split[1].substr(1);
         client.users.get(uid).send("`Started DM channel with " + users[uid].dm + ".` `Use .end to close.`")
       }
+
     } else if(fmsg === ".end"){
       users[uid].dm = '';
       client.users.get(uid).send("`Closed DM channel.`")
@@ -196,7 +197,7 @@ client.on('message', message => {
         });
 
         // Remove possibly unsafe chars
-        msg = msg.replace(/[^\w\$\s\.\,\?\!<>:]/g,'');
+        msg = msg.replace(/[^\w/\$\s\.\,\?\!<>:]/g,'');
 
         activeUsers[uid] = Date.now();
 
